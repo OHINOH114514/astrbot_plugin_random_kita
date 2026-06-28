@@ -300,7 +300,7 @@
 
         // Delete button
         delBtn.addEventListener('click', async () => {
-          if (!confirm(`确定删除「${img.name}」吗？`)) return;
+          delBtn.textContent = '...';
           try {
             const r = await bridge.apiPost('images/delete', { filename: img.name });
             showStatus(`已删除「${img.name}」`, 'success');
@@ -344,7 +344,6 @@
     // Batch delete
     batchDelBtn.addEventListener('click', async () => {
       if (selected.size === 0) return;
-      if (!confirm(`确定删除选中的 ${selected.size} 张图片吗？`)) return;
       const names = Array.from(selected);
       try {
         const r = await bridge.apiPost('images/batch-delete', { filenames: names });
