@@ -128,6 +128,9 @@
 
   <div class="toolbar">
     <div class="info">共 <strong id="totalCount">0</strong> 张图片</div>
+    <span style="font-size:13px;color:var(--muted)" id="pageInfo"></span>
+    <button class="btn btn-outline btn-sm" id="prevPageBtn" disabled>上一页</button>
+    <button class="btn btn-outline btn-sm" id="nextPageBtn" disabled>下一页</button>
     <button class="btn btn-primary" id="downloadBtn">
       <span class="spinner"></span><span class="label">下载预设</span>
     </button>
@@ -174,6 +177,9 @@
 
     let allImages = [];
     let selected = new Set();
+    let currentPage = 1;
+    let totalImages = 0;
+    const PER_PAGE = 30;
 
     function showStatus(msg, type, duration = 3000) {
       statusBar.textContent = msg;
@@ -182,16 +188,25 @@
       statusBar._timer = setTimeout(() => statusBar.classList.remove('show'), duration);
     }
 
-    async function loadImages() {
+    async function loadImages(page = currentPage) {
       try {
-        const res = await bridge.apiGet('images');
+        const res = await bridge.apiGet('images', { page, per_page: PER_PAGE });
         allImages = res.images || [];
-        totalCount.textContent = allImages.length;
+        totalImages = res.total || 0;
+        currentPage = res.page || 1;
+        totalCount.textContent = totalImages;
+        const totalPages = Math.ceil(totalImages / PER_PAGE) || 1;
+        $('pageInfo').textContent = `第 ${currentPage}/${totalPages} 页`;
+        $('prevPageBtn').disabled = currentPage <= 1;
+        $('nextPageBtn').disabled = currentPage >= totalPages;
         renderGallery();
       } catch (e) {
         showStatus('加载失败: ' + e.message, 'error');
       }
     }
+
+    $('prevPageBtn').addEventListener('click', () => loadImages(currentPage - 1));
+    $('nextPageBtn').addEventListener('click', () => loadImages(currentPage + 1));
 
     function renderGallery() {
       gallery.innerHTML = '';
@@ -211,25 +226,58 @@
           ? (img.size / 1024 / 1024).toFixed(1) + ' MB'
           : (img.size / 1024).toFixed(0) + ' KB';
 
-        const imgSrc = img.thumb || '';
-
         const item = document.createElement('div');
         item.className = 'gallery-item';
 
-        item.innerHTML = `
-          <input type="checkbox" class="checkbox" data-name="${img.name}">
-          <button class="del-btn" data-name="${img.name}" title="删除">✕</button>
-          <div class="thumb-wrap">
-            ${imgSrc ? `<img src="${imgSrc}" alt="${img.name}" loading="lazy">` : '<div class="placeholder">🖼</div>'}
-          </div>
-          <div class="info-row">
-            <span class="name" title="${img.name}">${img.name}</span>
-            <span style="font-size:11px;color:var(--muted);flex-shrink:0">${sizeStr}</span>
-          </div>
-        `;
+        // Build elements with DOM to avoid AstrBot's SRC rewriting
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'checkbox';
+        cb.dataset.name = img.name;
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'del-btn';
+        delBtn.dataset.name = img.name;
+        delBtn.title = '删除';
+        delBtn.textContent = '✕';
+
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'thumb-wrap';
+        if (img.thumb) {
+          const imgEl = document.createElement('img');
+          imgEl.src = img.thumb;
+          imgEl.alt = img.name;
+          imgEl.loading = 'lazy';
+          imgEl.addEventListener('click', () => {
+            previewImg.src = img.thumb;
+            previewModal.classList.add('show');
+          });
+          thumbWrap.appendChild(imgEl);
+        } else {
+          const ph = document.createElement('div');
+          ph.className = 'placeholder';
+          ph.textContent = '🖼';
+          thumbWrap.appendChild(ph);
+        }
+
+        const infoRow = document.createElement('div');
+        infoRow.className = 'info-row';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'name';
+        nameSpan.title = img.name;
+        nameSpan.textContent = img.name;
+        const sizeSpan = document.createElement('span');
+        sizeSpan.style.cssText = 'font-size:11px;color:var(--muted);flex-shrink:0';
+        sizeSpan.textContent = sizeStr;
+        infoRow.appendChild(nameSpan);
+        infoRow.appendChild(sizeSpan);
+
+        item.appendChild(cb);
+        item.appendChild(delBtn);
+        item.appendChild(thumbWrap);
+        item.appendChild(infoRow);
 
         // Checkbox handler
-        const cb = item.querySelector('.checkbox');
         cb.addEventListener('change', () => {
           if (cb.checked) selected.add(img.name);
           else selected.delete(img.name);
@@ -237,7 +285,6 @@
         });
 
         // Delete button
-        const delBtn = item.querySelector('.del-btn');
         delBtn.addEventListener('click', async () => {
           if (!confirm(`确定删除「${img.name}」吗？`)) return;
           try {
@@ -268,7 +315,7 @@
       selectBar.classList.toggle('show', count > 0);
     }
 
-    // Select all
+    // Select all (only visible page)
     selectAllCheck.addEventListener('change', () => {
       const checked = selectAllCheck.checked;
       document.querySelectorAll('.gallery-item .checkbox').forEach(cb => {
@@ -312,7 +359,7 @@
     });
 
     // Refresh
-    $('refreshBtn').addEventListener('click', loadImages);
+    $('refreshBtn').addEventListener('click', () => loadImages(1));
 
     // Modal close
     $('modalClose').addEventListener('click', () => {

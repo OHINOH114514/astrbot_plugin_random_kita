@@ -112,15 +112,31 @@ class RandomKitaPlugin(Star):
     def _make_thumb(self, filepath: Path) -> str:
         if not _HAVE_PIL:
             return ""
+        thumb_dir = self.data_path / "thumbs"
+        thumb_dir.mkdir(exist_ok=True)
+        thumb_path = thumb_dir / f"{filepath.stem}.jpg"
+        if thumb_path.exists():
+            b64 = base64.b64encode(thumb_path.read_bytes()).decode()
+            return f"data:image/jpeg;base64,{b64}"
         try:
             img = Image.open(filepath)
             img.thumbnail((120, 120))
             buf = io.BytesIO()
             img.convert("RGB").save(buf, "JPEG", quality=60)
+            thumb_path.write_bytes(buf.getvalue())
             b64 = base64.b64encode(buf.getvalue()).decode()
             return f"data:image/jpeg;base64,{b64}"
         except Exception:
             return ""
+
+    def _get_page(self):
+        try:
+            from quart import request
+            page = request.args.get("page", 1, type=int)
+            per_page = request.args.get("per_page", 30, type=int)
+        except Exception:
+            page, per_page = 1, 30
+        return max(1, page), max(1, min(100, per_page))
 
     async def _download_images(self, url: str) -> bool:
         try:
@@ -166,14 +182,18 @@ class RandomKitaPlugin(Star):
 
     async def handle_list_images(self):
         self.image_files = self._scan_images()
+        page, per_page = self._get_page()
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_files = self.image_files[start:end]
         files = []
-        for f in self.image_files:
+        for f in page_files:
             files.append({
                 "name": f.name,
                 "size": f.stat().st_size,
                 "thumb": self._make_thumb(f),
             })
-        return {"images": files, "total": len(files)}
+        return {"images": files, "total": len(self.image_files), "page": page, "per_page": per_page}
 
     async def handle_serve_image(self, filename: str):
         safe = self._safe_filename(filename)
