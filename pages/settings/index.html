@@ -158,7 +158,8 @@
     const bridge = window.AstrBotPluginPage;
     await bridge.ready();
 
-    const BASE = await bridge.getContext().then(c => c.pluginName);
+    const ctx = await bridge.ready();
+    const BASE = ctx.pluginName;
     const $ = id => document.getElementById(id);
     const gallery = $('gallery');
     const emptyState = $('emptyState');
