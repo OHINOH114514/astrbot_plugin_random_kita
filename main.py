@@ -89,19 +89,19 @@ class RandomKitaPlugin(Star):
             return False
 
     async def handle_download(self):
-        from astrbot.api.web import json_response, error_response
         url = self._get_config_url()
         if not url:
-            return error_response("请先在插件配置中设置「预设图片包下载地址」")
+            logger.warning("下载失败: github_release_url 未配置")
+            return {"status": "error", "message": "请先在插件配置中设置「预设图片包下载地址」"}
         ok = await self._download_images(url)
         if ok:
-            return json_response({"success": True, "count": len(self.image_files)})
-        return error_response("下载失败，请检查 URL 是否正确")
+            return {"status": "ok", "data": {"count": len(self.image_files)}}
+        logger.error("下载失败，检查 URL 或网络")
+        return {"status": "error", "message": "下载失败，请检查 URL 是否正确且服务器能访问该地址"}
 
     async def handle_count(self):
-        from astrbot.api.web import json_response
         self.image_files = self._scan_images()
-        return json_response({"count": len(self.image_files)})
+        return {"count": len(self.image_files)}
 
     async def _save_image_from_url(self, url: str) -> Path | None:
         try:
