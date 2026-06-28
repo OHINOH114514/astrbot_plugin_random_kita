@@ -1,5 +1,6 @@
 import asyncio
-import json
+import base64
+import io
 import os
 import random
 import tempfile
@@ -11,6 +12,12 @@ from astrbot.api import logger
 from astrbot.api import message_components as Comp
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
+
+try:
+    from PIL import Image
+    _HAVE_PIL = True
+except ImportError:
+    _HAVE_PIL = False
 
 SUPPORTED_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
 
@@ -102,6 +109,19 @@ class RandomKitaPlugin(Star):
     def _safe_filename(self, name: str) -> str:
         return os.path.basename(name)
 
+    def _make_thumb(self, filepath: Path) -> str:
+        if not _HAVE_PIL:
+            return ""
+        try:
+            img = Image.open(filepath)
+            img.thumbnail((120, 120))
+            buf = io.BytesIO()
+            img.convert("RGB").save(buf, "JPEG", quality=60)
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            return f"data:image/jpeg;base64,{b64}"
+        except Exception:
+            return ""
+
     async def _download_images(self, url: str) -> bool:
         try:
             logger.info(f"正在从 {url} 下载喜多图片...")
@@ -151,9 +171,9 @@ class RandomKitaPlugin(Star):
             files.append({
                 "name": f.name,
                 "size": f.stat().st_size,
-                "ext": f.suffix.lower(),
+                "thumb": self._make_thumb(f),
             })
-        return {"images": files}
+        return {"images": files, "total": len(files)}
 
     async def handle_serve_image(self, filename: str):
         safe = self._safe_filename(filename)

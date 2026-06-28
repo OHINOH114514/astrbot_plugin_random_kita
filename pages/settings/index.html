@@ -182,10 +182,6 @@
       statusBar._timer = setTimeout(() => statusBar.classList.remove('show'), duration);
     }
 
-    function getThumbUrl(name) {
-      return `/api/v1/plugins/extensions/${BASE}/image/${encodeURIComponent(name)}`;
-    }
-
     async function loadImages() {
       try {
         const res = await bridge.apiGet('images');
@@ -215,6 +211,8 @@
           ? (img.size / 1024 / 1024).toFixed(1) + ' MB'
           : (img.size / 1024).toFixed(0) + ' KB';
 
+        const imgSrc = img.thumb || '';
+
         const item = document.createElement('div');
         item.className = 'gallery-item';
 
@@ -222,8 +220,7 @@
           <input type="checkbox" class="checkbox" data-name="${img.name}">
           <button class="del-btn" data-name="${img.name}" title="删除">✕</button>
           <div class="thumb-wrap">
-            <img src="${getThumbUrl(img.name)}" alt="${img.name}" loading="lazy"
-                 onerror="this.parentElement.innerHTML='<div class=placeholder>🖼</div>'">
+            ${imgSrc ? `<img src="${imgSrc}" alt="${img.name}" loading="lazy">` : '<div class="placeholder">🖼</div>'}
           </div>
           <div class="info-row">
             <span class="name" title="${img.name}">${img.name}</span>
