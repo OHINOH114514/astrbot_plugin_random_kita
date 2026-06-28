@@ -4,7 +4,7 @@ short_desc: 随机发送一张喜多郁代（Kita Ikuyo）的图片~
 desc: 在聊天中使用 /随机喜多 指令，随机发送一张预设的喜多图片。支持通过聊天上传图片、从 GitHub Release 下载预设图片包。
 version: "1.0.0"
 author: "Kita"
-repo: "https://github.com/your-username/astrbot_plugin_random_kita"
+repo: "https://github.com/OHINOH114514/astrbot_plugin_random_kita"
 support_platforms:
   - aiocqhttp
   - qq_official
