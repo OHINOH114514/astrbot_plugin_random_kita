@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>图片管理</title>
+  <style>
+    :root { --bg: #f5f5f5; --card: #fff; --text: #333; --primary: #e05a7a; --success: #52c41a; --muted: #999; }
+    [data-theme="dark"] { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --primary: #ff6b8a; --success: #73d13d; --muted: #666; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6;
+    }
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    .desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .card {
+      background: var(--card); border-radius: 12px; padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-width: 480px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      background: var(--primary); color: #fff; transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+    .status { margin-top: 16px; font-size: 14px; min-height: 20px; }
+    .status.success { color: var(--success); }
+    .status.error { color: #ff4d4f; }
+    .count { display: block; margin-top: 12px; font-size: 14px; color: var(--muted); }
+    .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    .btn.loading .spinner { display: inline-block; }
+    .btn.loading .label { opacity: 0.7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <h1>喜多图片管理</h1>
+  <p class="desc">从 GitHub Release 下载预设的喜多图片包</p>
+  <div class="card">
+    <h2>预设图片包</h2>
+    <button class="btn" id="downloadBtn">
+      <span class="spinner"></span>
+      <span class="label">下载预设图片</span>
+    </button>
+    <div class="status" id="status"></div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <script type="module">
+    const bridge = window.AstrBotPluginPage;
+    await bridge.ready();
+
+    const btn = document.getElementById('downloadBtn');
+    const status = document.getElementById('status');
+    const count = document.getElementById('count');
+
+    async function refreshCount() {
+      try {
+        const res = await bridge.apiGet('count');
+        count.textContent = `当前图库: ${res.count} 张图片`;
+      } catch { count.textContent = ''; }
+    }
+    refreshCount();
+
+    btn.addEventListener('click', async () => {
+      btn.classList.add('loading');
+      btn.disabled = true;
+      status.className = 'status';
+      status.textContent = '正在下载...';
+
+      try {
+        const res = await bridge.apiPost('download');
+        status.className = 'status success';
+        status.textContent = `下载成功！共 ${res.count} 张图片~`;
+        refreshCount();
+      } catch (e) {
+        status.className = 'status error';
+        status.textContent = `下载失败: ${e.message}`;
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.astrbot.app)",
+      "WebSearch",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/plugin-new.html')",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/simple.html')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/listen-message-event.html')",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/plugin-config.html')",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/send-message.html')",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/ai.html')",
+      "Bash(curl --noproxy '*' -s -L 'https://docs.astrbot.app/dev/star/guides/storage.html')",
+      "Read(//e//**)",
+      "Bash(mv \"E:/�½��ļ���\" \"E:/astrbot_plugin_random_kita\")",
+      "Bash(python3 -c \"import os; os.rename\\('E:/�½��ļ���', 'E:/astrbot_plugin_random_kita'\\)\")",
+      "Bash(powershell -Command \"Rename-Item -Path 'E:\\\\�½��ļ���' -NewName 'astrbot_plugin_random_kita' -Force\")",
+      "Bash(cmd.exe //c \"rename \"E:\\\\�½��ļ���\" astrbot_plugin_random_kita\")",
+      "Bash(python3 *)",
+      "Bash(gh auth *)",
+      "Bash(git config *)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}

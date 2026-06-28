@@ -1,0 +1,12 @@
+# 图片原始文件（太大，走 GitHub Release）
+喜多图/
+kita-images.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 系统
+.DS_Store
+Thumbs.db
