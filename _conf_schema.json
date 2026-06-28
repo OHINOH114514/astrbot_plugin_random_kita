@@ -2,7 +2,7 @@
   "github_release_url": {
     "description": "预设图片包下载地址（GitHub Release ZIP）",
     "type": "string",
-    "hint": "例如: https://github.com/your-username/astrbot_plugin_random_kita/releases/latest/download/kita-images.zip",
-    "default": ""
+    "hint": "当前默认已指向你的仓库 Release 地址",
+    "default": "https://github.com/OHINOH114514/astrbot_plugin_random_kita/releases/latest/download/kita-images.zip"
   }
 }
