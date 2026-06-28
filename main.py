@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import random
 import tempfile
@@ -12,6 +13,13 @@ from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 
 SUPPORTED_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
+
+# Quart imports for web API handlers (fallback if astrbot.api.web unavailable)
+try:
+    from astrbot.api.web import request as web_request
+    _HAVE_ASTRBOT_WEB = True
+except ImportError:
+    _HAVE_ASTRBOT_WEB = False
 
 
 class RandomKitaPlugin(Star):
@@ -39,6 +47,30 @@ class RandomKitaPlugin(Star):
             ["GET"],
             "获取当前图片数量",
         )
+        context.register_web_api(
+            f"/{self.plugin_name}/images",
+            self.handle_list_images,
+            ["GET"],
+            "列出所有图片",
+        )
+        context.register_web_api(
+            f"/{self.plugin_name}/image/<path:filename>",
+            self.handle_serve_image,
+            ["GET"],
+            "获取图片文件",
+        )
+        context.register_web_api(
+            f"/{self.plugin_name}/images/delete",
+            self.handle_delete_image,
+            ["POST"],
+            "删除单张图片",
+        )
+        context.register_web_api(
+            f"/{self.plugin_name}/images/batch-delete",
+            self.handle_batch_delete,
+            ["POST"],
+            "批量删除图片",
+        )
 
     def _get_data_root(self) -> Path:
         try:
@@ -60,6 +92,15 @@ class RandomKitaPlugin(Star):
             return getattr(self, 'config', {}).get("github_release_url", "")
         except Exception:
             return ""
+
+    async def _get_request_json(self):
+        if _HAVE_ASTRBOT_WEB:
+            return await web_request.json(default={})
+        from quart import request
+        return await request.get_json(force=True, silent=True) or {}
+
+    def _safe_filename(self, name: str) -> str:
+        return os.path.basename(name)
 
     async def _download_images(self, url: str) -> bool:
         try:
@@ -102,6 +143,54 @@ class RandomKitaPlugin(Star):
     async def handle_count(self):
         self.image_files = self._scan_images()
         return {"count": len(self.image_files)}
+
+    async def handle_list_images(self):
+        self.image_files = self._scan_images()
+        files = []
+        for f in self.image_files:
+            files.append({
+                "name": f.name,
+                "size": f.stat().st_size,
+                "ext": f.suffix.lower(),
+            })
+        return {"images": files}
+
+    async def handle_serve_image(self, filename: str):
+        safe = self._safe_filename(filename)
+        filepath = self.images_dir / safe
+        if not filepath.exists() or not filepath.is_file():
+            return {"error": "not found"}, 404
+        from quart import send_file
+        return await send_file(str(filepath))
+
+    async def handle_delete_image(self):
+        data = await self._get_request_json()
+        name = self._safe_filename(data.get("filename", ""))
+        if not name:
+            return {"status": "error", "message": "缺少文件名"}
+        filepath = self.images_dir / name
+        if filepath.exists() and filepath.is_file():
+            filepath.unlink()
+            self.image_files = self._scan_images()
+            logger.info(f"删除图片: {name}")
+            return {"status": "ok", "data": {"count": len(self.image_files)}}
+        return {"status": "error", "message": "文件不存在"}
+
+    async def handle_batch_delete(self):
+        data = await self._get_request_json()
+        names = data.get("filenames", [])
+        if not names:
+            return {"status": "error", "message": "缺少文件名列表"}
+        deleted = 0
+        for n in names:
+            safe = self._safe_filename(n)
+            fp = self.images_dir / safe
+            if fp.exists() and fp.is_file():
+                fp.unlink()
+                deleted += 1
+        self.image_files = self._scan_images()
+        logger.info(f"批量删除 {deleted} 张图片")
+        return {"status": "ok", "data": {"deleted": deleted, "count": len(self.image_files)}}
 
     async def _save_image_from_url(self, url: str) -> Path | None:
         try:

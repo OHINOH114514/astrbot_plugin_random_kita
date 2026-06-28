@@ -2,88 +2,342 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>图片管理</title>
   <style>
-    :root { --bg: #f5f5f5; --card: #fff; --text: #333; --primary: #e05a7a; --success: #52c41a; --muted: #999; }
-    [data-theme="dark"] { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --primary: #ff6b8a; --success: #73d13d; --muted: #666; }
+    :root { --bg: #f5f5f5; --card: #fff; --text: #333; --primary: #e05a7a; --hover: #c94d6a; --success: #52c41a; --danger: #ff4d4f; --muted: #999; --border: #e8e8e8; --shadow: rgba(0,0,0,0.08); }
+    [data-theme="dark"] { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --primary: #ff6b8a; --hover: #e05a7a; --success: #73d13d; --danger: #ff7875; --muted: #666; --border: #404040; --shadow: rgba(0,0,0,0.3); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--text); padding: 24px; line-height: 1.6;
+      background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5;
     }
-    h1 { font-size: 20px; margin-bottom: 8px; }
-    .desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
-    .card {
-      background: var(--card); border-radius: 12px; padding: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-width: 480px;
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--card); padding: 14px 18px; border-radius: 10px;
+      box-shadow: 0 1px 3px var(--shadow); margin-bottom: 16px;
     }
-    .card h2 { font-size: 16px; margin-bottom: 12px; }
+    .toolbar .info { flex: 1; font-size: 14px; min-width: 100px; }
+    .toolbar .info strong { font-size: 18px; }
     .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 24px; border: none; border-radius: 8px;
-      font-size: 15px; font-weight: 600; cursor: pointer;
-      background: var(--primary); color: #fff; transition: opacity 0.2s;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border: none; border-radius: 7px;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .2s;
     }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn:not(:disabled):hover { opacity: 0.85; }
-    .status { margin-top: 16px; font-size: 14px; min-height: 20px; }
-    .status.success { color: var(--success); }
-    .status.error { color: #ff4d4f; }
-    .count { display: block; margin-top: 12px; font-size: 14px; color: var(--muted); }
-    .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:not(:disabled):hover { background: var(--hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:not(:disabled):hover { opacity: .85; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--border); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
     .btn.loading .spinner { display: inline-block; }
-    .btn.loading .label { opacity: 0.7; }
+    .btn.loading .label { opacity: .7; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .gallery {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .gallery-item {
+      background: var(--card); border-radius: 10px; overflow: hidden;
+      box-shadow: 0 1px 3px var(--shadow); position: relative;
+      transition: box-shadow .2s;
+    }
+    .gallery-item:hover { box-shadow: 0 2px 8px var(--shadow); }
+    .gallery-item .thumb-wrap {
+      width: 100%; aspect-ratio: 1; overflow: hidden;
+      background: #f0f0f0; display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .gallery-item .thumb-wrap img {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block;
+    }
+    .gallery-item .thumb-wrap .placeholder {
+      font-size: 32px; color: #ccc;
+    }
+    .gallery-item .info-row {
+      padding: 8px 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .gallery-item .info-row .name {
+      flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .gallery-item .checkbox {
+      position: absolute; top: 6px; left: 6px; z-index: 2;
+      width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);
+    }
+    .gallery-item .del-btn {
+      position: absolute; top: 6px; right: 6px; z-index: 2;
+      width: 26px; height: 26px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,.45); color: #fff; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .2s;
+    }
+    .gallery-item:hover .del-btn { opacity: 1; }
+    .gallery-item .del-btn:hover { background: var(--danger); }
+
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty p { margin-top: 8px; font-size: 14px; }
+
+    .status-bar {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      padding: 10px 24px; border-radius: 10px; font-size: 14px;
+      background: var(--card); box-shadow: 0 4px 12px var(--shadow);
+      display: none; z-index: 100;
+    }
+    .status-bar.show { display: block; }
+    .status-bar.success { border-left: 4px solid var(--success); }
+    .status-bar.error { border-left: 4px solid var(--danger); }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: none; align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--card); border-radius: 14px; max-width: 90vw; max-height: 90vh;
+      overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.3);
+      display: flex; flex-direction: column;
+    }
+    .modal img { max-width: 80vw; max-height: 80vh; display: block; object-fit: contain; }
+    .modal .modal-close {
+      position: absolute; top: 12px; right: 14px; background: rgba(0,0,0,.5);
+      color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px;
+      font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    .select-all-bar {
+      display: none; align-items: center; gap: 10px;
+      background: var(--card); padding: 10px 18px; border-radius: 10px;
+      box-shadow: 0 1px 3px var(--shadow); margin-bottom: 12px;
+    }
+    .select-all-bar.show { display: flex; }
+    .select-all-bar label { font-size: 14px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
   <h1>喜多图片管理</h1>
-  <p class="desc">从 GitHub Release 下载预设的喜多图片包</p>
-  <div class="card">
-    <h2>预设图片包</h2>
-    <button class="btn" id="downloadBtn">
-      <span class="spinner"></span>
-      <span class="label">下载预设图片</span>
+  <p class="subtitle">浏览、删除图片，或从 GitHub Release 下载预设包</p>
+
+  <div class="toolbar">
+    <div class="info">共 <strong id="totalCount">0</strong> 张图片</div>
+    <button class="btn btn-primary" id="downloadBtn">
+      <span class="spinner"></span><span class="label">下载预设</span>
     </button>
-    <div class="status" id="status"></div>
-    <span class="count" id="count"></span>
+    <button class="btn btn-outline" id="refreshBtn">刷新</button>
+  </div>
+
+  <div class="select-all-bar" id="selectBar">
+    <label><input type="checkbox" id="selectAllCheck"> 全选</label>
+    <button class="btn btn-danger btn-sm" id="batchDelBtn">删除选中 (<span id="selCount">0</span>)</button>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+  <div class="empty" id="emptyState">
+    <div style="font-size:40px;margin-bottom:8px;">📭</div>
+    <p>还没有图片哦~<br>点击「下载预设」或使用 /上传喜多 来添加叭！</p>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal" style="position:relative">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <img id="previewImg" src="" alt="preview">
+    </div>
   </div>
 
   <script type="module">
     const bridge = window.AstrBotPluginPage;
     await bridge.ready();
 
-    const btn = document.getElementById('downloadBtn');
-    const status = document.getElementById('status');
-    const count = document.getElementById('count');
+    const BASE = await bridge.getContext().then(c => c.pluginName);
+    const $ = id => document.getElementById(id);
+    const gallery = $('gallery');
+    const emptyState = $('emptyState');
+    const totalCount = $('totalCount');
+    const statusBar = $('statusBar');
+    const selectBar = $('selectBar');
+    const selectAllCheck = $('selectAllCheck');
+    const selCount = $('selCount');
+    const batchDelBtn = $('batchDelBtn');
+    const previewModal = $('previewModal');
+    const previewImg = $('previewImg');
 
-    async function refreshCount() {
-      try {
-        const res = await bridge.apiGet('count');
-        count.textContent = `当前图库: ${res.count} 张图片`;
-      } catch { count.textContent = ''; }
+    let allImages = [];
+    let selected = new Set();
+
+    function showStatus(msg, type, duration = 3000) {
+      statusBar.textContent = msg;
+      statusBar.className = 'status-bar show ' + (type || '');
+      clearTimeout(statusBar._timer);
+      statusBar._timer = setTimeout(() => statusBar.classList.remove('show'), duration);
     }
-    refreshCount();
 
-    btn.addEventListener('click', async () => {
+    function getThumbUrl(name) {
+      return `/api/v1/plugins/extensions/${BASE}/image/${encodeURIComponent(name)}`;
+    }
+
+    async function loadImages() {
+      try {
+        const res = await bridge.apiGet('images');
+        allImages = res.images || [];
+        totalCount.textContent = allImages.length;
+        renderGallery();
+      } catch (e) {
+        showStatus('加载失败: ' + e.message, 'error');
+      }
+    }
+
+    function renderGallery() {
+      gallery.innerHTML = '';
+      selected.clear();
+      updateSelectBar();
+
+      if (allImages.length === 0) {
+        gallery.classList.add('hidden');
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+      gallery.classList.remove('hidden');
+
+      allImages.forEach(img => {
+        const sizeStr = img.size > 1024 * 1024
+          ? (img.size / 1024 / 1024).toFixed(1) + ' MB'
+          : (img.size / 1024).toFixed(0) + ' KB';
+
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+
+        item.innerHTML = `
+          <input type="checkbox" class="checkbox" data-name="${img.name}">
+          <button class="del-btn" data-name="${img.name}" title="删除">✕</button>
+          <div class="thumb-wrap">
+            <img src="${getThumbUrl(img.name)}" alt="${img.name}" loading="lazy"
+                 onerror="this.parentElement.innerHTML='<div class=placeholder>🖼</div>'">
+          </div>
+          <div class="info-row">
+            <span class="name" title="${img.name}">${img.name}</span>
+            <span style="font-size:11px;color:var(--muted);flex-shrink:0">${sizeStr}</span>
+          </div>
+        `;
+
+        // Checkbox handler
+        const cb = item.querySelector('.checkbox');
+        cb.addEventListener('change', () => {
+          if (cb.checked) selected.add(img.name);
+          else selected.delete(img.name);
+          updateSelectBar();
+        });
+
+        // Delete button
+        const delBtn = item.querySelector('.del-btn');
+        delBtn.addEventListener('click', async () => {
+          if (!confirm(`确定删除「${img.name}」吗？`)) return;
+          try {
+            const r = await bridge.apiPost('images/delete', { filename: img.name });
+            showStatus(`已删除「${img.name}」`, 'success');
+            await loadImages();
+          } catch (e) {
+            showStatus('删除失败: ' + e.message, 'error');
+          }
+        });
+
+        // Click to preview
+        const thumb = item.querySelector('.thumb-wrap img');
+        if (thumb) {
+          thumb.addEventListener('click', () => {
+            previewImg.src = thumb.src;
+            previewModal.classList.add('show');
+          });
+        }
+
+        gallery.appendChild(item);
+      });
+    }
+
+    function updateSelectBar() {
+      const count = selected.size;
+      selCount.textContent = count;
+      selectBar.classList.toggle('show', count > 0);
+    }
+
+    // Select all
+    selectAllCheck.addEventListener('change', () => {
+      const checked = selectAllCheck.checked;
+      document.querySelectorAll('.gallery-item .checkbox').forEach(cb => {
+        cb.checked = checked;
+        const name = cb.dataset.name;
+        if (checked) selected.add(name);
+        else selected.delete(name);
+      });
+      updateSelectBar();
+    });
+
+    // Batch delete
+    batchDelBtn.addEventListener('click', async () => {
+      if (selected.size === 0) return;
+      if (!confirm(`确定删除选中的 ${selected.size} 张图片吗？`)) return;
+      const names = Array.from(selected);
+      try {
+        const r = await bridge.apiPost('images/batch-delete', { filenames: names });
+        showStatus(`已删除 ${r.deleted} 张图片`, 'success');
+        await loadImages();
+      } catch (e) {
+        showStatus('批量删除失败: ' + e.message, 'error');
+      }
+    });
+
+    // Download preset
+    $('downloadBtn').addEventListener('click', async () => {
+      const btn = $('downloadBtn');
       btn.classList.add('loading');
       btn.disabled = true;
-      status.className = 'status';
-      status.textContent = '正在下载...';
-
       try {
-        const res = await bridge.apiPost('download');
-        status.className = 'status success';
-        status.textContent = `下载成功！共 ${res.count} 张图片~`;
-        refreshCount();
+        const r = await bridge.apiPost('download');
+        showStatus(`下载成功！共 ${r.count} 张图片~`, 'success');
+        await loadImages();
       } catch (e) {
-        status.className = 'status error';
-        status.textContent = `下载失败: ${e.message}`;
+        showStatus('下载失败: ' + e.message, 'error');
       } finally {
         btn.classList.remove('loading');
         btn.disabled = false;
       }
     });
+
+    // Refresh
+    $('refreshBtn').addEventListener('click', loadImages);
+
+    // Modal close
+    $('modalClose').addEventListener('click', () => {
+      previewModal.classList.remove('show');
+      previewImg.src = '';
+    });
+    previewModal.addEventListener('click', (e) => {
+      if (e.target === previewModal) {
+        previewModal.classList.remove('show');
+        previewImg.src = '';
+      }
+    });
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        previewModal.classList.remove('show');
+        previewImg.src = '';
+      }
+    });
+
+    // Init
+    await loadImages();
   </script>
 </body>
 </html>
