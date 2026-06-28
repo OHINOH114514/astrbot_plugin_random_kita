@@ -129,8 +129,10 @@
   <div class="toolbar">
     <div class="info">共 <strong id="totalCount">0</strong> 张图片</div>
     <span style="font-size:13px;color:var(--muted)" id="pageInfo"></span>
-    <button class="btn btn-outline btn-sm" id="prevPageBtn" disabled>上一页</button>
-    <button class="btn btn-outline btn-sm" id="nextPageBtn" disabled>下一页</button>
+    <button class="btn btn-outline btn-sm" id="prevPageBtn" disabled>‹</button>
+    <input type="number" id="pageInput" min="1" style="width:50px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--text);font-size:13px;text-align:center">
+    <button class="btn btn-outline btn-sm" id="goPageBtn">跳转</button>
+    <button class="btn btn-outline btn-sm" id="nextPageBtn" disabled>›</button>
     <button class="btn btn-primary" id="downloadBtn">
       <span class="spinner"></span><span class="label">下载预设</span>
     </button>
@@ -197,6 +199,8 @@
         totalCount.textContent = totalImages;
         const totalPages = Math.ceil(totalImages / PER_PAGE) || 1;
         $('pageInfo').textContent = `第 ${currentPage}/${totalPages} 页`;
+        $('pageInput').value = currentPage;
+        $('pageInput').max = totalPages;
         $('prevPageBtn').disabled = currentPage <= 1;
         $('nextPageBtn').disabled = currentPage >= totalPages;
         renderGallery();
@@ -207,6 +211,16 @@
 
     $('prevPageBtn').addEventListener('click', () => loadImages(currentPage - 1));
     $('nextPageBtn').addEventListener('click', () => loadImages(currentPage + 1));
+    $('goPageBtn').addEventListener('click', () => {
+      const p = parseInt($('pageInput').value);
+      if (p > 0) loadImages(p);
+    });
+    $('pageInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const p = parseInt($('pageInput').value);
+        if (p > 0) loadImages(p);
+      }
+    });
 
     function renderGallery() {
       gallery.innerHTML = '';
