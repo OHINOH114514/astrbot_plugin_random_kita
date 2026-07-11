@@ -7,6 +7,7 @@ import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
+import datetime
 
 from astrbot.api import logger
 from astrbot.api import message_components as Comp
@@ -305,6 +306,47 @@ class RandomKitaPlugin(Star):
         """查看当前喜多图片数量"""
         self.image_files = self._scan_images()
         yield event.plain_result(f"当前有 {len(self.image_files)} 张喜多图片哦~")
+
+    @filter.command("今日喜多")
+    async def today_kita(self, event: AstrMessageEvent):
+        """每人每天限领一张今日喜多图片，显示连续天数和累计天数"""
+        user_id = event.get_sender_id()
+        last_date = await self.get_kv_data(f"random_kita:{user_id}:last", "")
+        last_streak = await self.get_kv_data(f"random_kita:{user_id}:streak", "0")
+        last_total = await self.get_kv_data(f"random_kita:{user_id}:total", "0")
+
+        today = datetime.date.today().isoformat()
+
+        # 今天已领过
+        if last_date == today:
+            yield event.plain_result(
+                f"你今天已经领过喜多啦~ 已连续 {last_streak} 天，累计 {last_total} 天，明天再来叭！"
+            )
+            return
+
+        # 刷新图片列表
+        self.image_files = self._scan_images()
+        if not self.image_files:
+            yield event.plain_result("还没有喜多图片呢~ 试试用 /上传喜多 来添加叭！")
+            return
+
+        # 计算连续天数
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        if last_date == yesterday.isoformat():
+            streak = int(last_streak or "0") + 1
+        else:
+            streak = 1
+        total = int(last_total or "0") + 1
+
+        # 写入 KV
+        await self.put_kv_data(f"random_kita:{user_id}:last", today)
+        await self.put_kv_data(f"random_kita:{user_id}:streak", str(streak))
+        await self.put_kv_data(f"random_kita:{user_id}:total", str(total))
+
+        # 随机发图
+        img = random.choice(self.image_files)
+        yield event.image_result(str(img))
+        yield event.plain_result(f"🎸 今日喜多！你已经连续领取 {streak} 天，累计 {total} 天啦~")
 
     async def terminate(self):
         logger.info("随机喜多插件已卸载，再见~")
