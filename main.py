@@ -343,10 +343,44 @@ class RandomKitaPlugin(Star):
         await self.put_kv_data(f"random_kita:{user_id}:streak", str(streak))
         await self.put_kv_data(f"random_kita:{user_id}:total", str(total))
 
+        # 更新排行榜
+        name = event.get_sender_name()
+        lb = await self.get_kv_data("random_kita:leaderboard", {})
+        lb[user_id] = {"name": name, "streak": streak, "total": total}
+        await self.put_kv_data("random_kita:leaderboard", lb)
+
         # 随机发图
         img = random.choice(self.image_files)
         yield event.image_result(str(img))
         yield event.plain_result(f"🎸 今日喜多！你已经连续领取 {streak} 天，累计 {total} 天啦~")
+
+    @filter.command("喜多排行榜")
+    async def leaderboard(self, event: AstrMessageEvent):
+        """展示连续打卡和累计打卡排行榜 TOP 5"""
+        lb: dict = await self.get_kv_data("random_kita:leaderboard", {})
+        if not lb:
+            yield event.plain_result("还没有人打卡呢~ 快来发 /今日喜多 叭！")
+            return
+
+        medals = ["🥇", "🥈", "🥉", "4.", "5."]
+
+        msg = "🏆 喜多打卡排行榜 🏆\n\n"
+
+        # 连续打卡 TOP 5
+        streak_top = sorted(lb.items(), key=lambda x: x[1].get("streak", 0), reverse=True)[:5]
+        msg += "【连续打卡 TOP 5】\n"
+        for i, (uid, data) in enumerate(streak_top):
+            name = data.get("name", uid)
+            msg += f"{medals[i]} {name} — 连续 {data.get('streak', 0)} 天\n"
+
+        # 累计打卡 TOP 5
+        msg += "\n【累计打卡 TOP 5】\n"
+        total_top = sorted(lb.items(), key=lambda x: x[1].get("total", 0), reverse=True)[:5]
+        for i, (uid, data) in enumerate(total_top):
+            name = data.get("name", uid)
+            msg += f"{medals[i]} {name} — 累计 {data.get('total', 0)} 天\n"
+
+        yield event.plain_result(msg)
 
     async def terminate(self):
         logger.info("随机喜多插件已卸载，再见~")
